@@ -1,5 +1,6 @@
 using System;
 using LibraryManagement_system_API.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 namespace LibraryManagement_system_API
 {
@@ -17,6 +18,7 @@ namespace LibraryManagement_system_API
                 options.UseSqlServer(builder.Configuration.GetConnectionString("constr"));
             });
 
+            IdentityBuilder identityBuilder = builder.Services.AddIdentity<User, IdentityRole>().AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
