@@ -20,6 +20,9 @@ namespace LibraryManagement_system_API
 
             IdentityBuilder identityBuilder = builder.Services.AddIdentity<User, IdentityRole>().AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
 
+            // Other service registrations...
+            builder.Services.AddScoped<EmailService>();
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();

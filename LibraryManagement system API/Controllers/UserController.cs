@@ -1,6 +1,9 @@
-﻿using LibraryManagement_system_API.Models;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Mail;
+using MimeKit;
+using MailKit.Security;
+using System.Net;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -8,11 +11,14 @@ public class UserController : ControllerBase
 {
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
-    public UserController(UserManager<User> userManager, SignInManager<User> signInManager)
+    private readonly EmailService _emailService; // Add EmailService
+    public UserController(UserManager<User> userManager, SignInManager<User> signInManager, EmailService emailService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _emailService = emailService; // Injecting EmailService
     }
+
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] UserRegistrationModel model)
     {
@@ -63,5 +69,53 @@ public class UserController : ControllerBase
             // Invalid login
             return Unauthorized("Invalid email or password.");
         }
+    }
+
+
+    [HttpPost("forgotpassword")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+        {
+            return Ok(new { Message = "If an account with that email exists, a password reset link will be sent." });
+        }
+        // Generate reset token
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        // Encode the token to ensure it is URL-safe
+        var encodedToken = WebUtility.UrlEncode(token);
+        var resetLink = Url.Action("ResetPassword", "User", new { token = encodedToken, email = model.Email }, Request.Scheme);
+        // Send the email
+        await _emailService.SendEmailAsync(model.Email, "Password Reset Request",
+                                            $"Reset your password using this link: {resetLink}");
+        return Ok(new { Message = "If an account with that email exists, a password reset link will be sent." });
+    }
+
+
+    [HttpPost("resetpassword")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState); // Return validation errors
+        }
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+        {
+            return BadRequest(new { Message = "User not found." }); // Do not disclose user existence to avoid leaks
+        }
+        // Attempt to reset the password 
+        var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+        if (result.Succeeded)
+        {
+            return Ok(new { Message = "Password reset successful." });
+        }
+        // Return errors if reset fails
+        return BadRequest(result.Errors);
     }
 }
