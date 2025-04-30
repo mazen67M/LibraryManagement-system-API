@@ -4,6 +4,7 @@ using System.Net.Mail;
 using MimeKit;
 using MailKit.Security;
 using System.Net;
+using Microsoft.AspNetCore.Authorization;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -12,11 +13,13 @@ public class UserController : ControllerBase
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
     private readonly EmailService _emailService; // Add EmailService
-    public UserController(UserManager<User> userManager, SignInManager<User> signInManager, EmailService emailService)
+    private readonly RoleManager<IdentityRole> _roleManager;
+    public UserController(UserManager<User> userManager, SignInManager<User> signInManager, EmailService emailService, RoleManager<IdentityRole> roleManager)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _emailService = emailService; // Injecting EmailService
+        _roleManager = roleManager;
     }
 
     [HttpPost("register")]
@@ -118,4 +121,123 @@ public class UserController : ControllerBase
         // Return errors if reset fails
         return BadRequest(result.Errors);
     }
+
+    [HttpGet]
+    public IActionResult GetAllUsers()
+    {
+        // Fetch all users from the database
+        var users = _userManager.Users.ToList(); // Retrieves all users
+        return Ok(users); // Return list of users
+    }
+
+    //get user by email
+    // GET: api/user/email/{email}
+    [HttpGet("email/{email}")]
+    public async Task<ActionResult<User>> GetUserByEmail(string email)
+    {
+        // Validate email format if necessary
+        if (string.IsNullOrEmpty(email))
+        {
+            return BadRequest("Email is required.");
+        }
+        // Retrieve the user by email
+        var user = await _userManager.FindByEmailAsync(email);
+
+        if (user == null)
+        {
+            return NotFound($"No user found with email {email}.");
+        }
+        return Ok(user); // Return the user information
+    }
+
+    //Update user profile
+    [HttpPut("update")]
+    public async Task<IActionResult> UpdateUser([FromBody] UserUpdateModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState); // Return validation errors
+        }
+        // Retrieve the user using UserManager
+        var user = await _userManager.FindByIdAsync(model.UserId);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+        // Update user properties
+        user.FullName = model.FullName; // Assuming FullName is in your User class
+        user.PhoneNumber = model.PhoneNumber; // Update phone number if it's provided
+        // Update the user in the database
+        var result = await _userManager.UpdateAsync(user);
+        if (result.Succeeded)
+        {
+            return Ok(new { Message = "User updated successfully." });
+        }
+        return BadRequest(result.Errors);
+    }
+
+
+    //Delete User by email
+    [HttpDelete("email/{email}")]
+    public async Task<IActionResult> DeleteUserByEmail(string email)
+    {
+        // Validate email format if necessary
+        if (string.IsNullOrEmpty(email))
+        {
+            return BadRequest("Email is required.");
+        }
+        // Retrieve the user by email
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+        {
+            return NotFound($"No user found with email {email}.");
+        }
+        // Delete the user
+        var result = await _userManager.DeleteAsync(user);
+        if (result.Succeeded)
+        {
+            return NoContent(); // 204 No Content
+        }
+        // Return any errors during the deletion process
+        return BadRequest(result.Errors);
+    }
+
+     [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        if (!User.Identity.IsAuthenticated)
+        {
+            // User is not logged in
+            return BadRequest(new { Message = "You need to be logged in to log out." });
+        }
+        await _signInManager.SignOutAsync(); // Logout the user
+        return Ok(new { Message = "Logged out successfully." }); // Return success message
+    }
+
+    //Assign Roles to be admin or no
+    [HttpPost("assignrole")]
+    //[Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AssignRoleToUserByEmail([FromBody] RoleChangeModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+        if (!await _roleManager.RoleExistsAsync(model.NewRole))
+        {
+            return BadRequest("Role does not exist.");
+        }
+        var result = await _userManager.AddToRoleAsync(user, model.NewRole);
+        if (result.Succeeded)
+        {
+            return Ok(new { Message = "Role assigned successfully." });
+        }
+        return BadRequest(result.Errors);
+    }
 }
+
