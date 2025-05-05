@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LibraryManagement_system_API.Models; // Adjust the namespace accordingly
-using LibraryManagement_system_API.Models.DTOs; // Include the DTO
+using LibraryManagement_system_API.Models.DTOs;
+using LibraryManagement_system_API.Models.DataModels; // Include the DTO
 [Route("api/[controller]")]
 [ApiController]
 public class CategoryController : ControllerBase
@@ -93,6 +94,7 @@ public class CategoryController : ControllerBase
         }
         return NoContent(); // Successfully updated
     }
+
     // DELETE: api/category/{id}
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteCategory(int id)
@@ -109,5 +111,27 @@ public class CategoryController : ControllerBase
     private bool CategoryExists(int id)
     {
         return _context.Categories.Any(e => e.CategoryId == id);
+    }
+
+    [HttpGet("Count")]
+    public ActionResult<List<BookCategoriesCount>> GetCategoriesDetails()
+    {
+        List<Category> categories =
+            _context.Categories.Include(d=>d.Books).ToList();
+
+        List<BookCategoriesCount> BooksCategoriesCount
+            = new List<BookCategoriesCount>();
+
+        foreach (var item in categories)
+        {
+            BookCategoriesCount booksCatCount =
+                new BookCategoriesCount();
+            booksCatCount.Id = item.CategoryId;
+            booksCatCount.Name = item.CategoryName;
+            booksCatCount.BooksCount = item.Books.Count();
+
+            BooksCategoriesCount.Add(booksCatCount);
+        }
+        return Ok(BooksCategoriesCount);
     }
 }

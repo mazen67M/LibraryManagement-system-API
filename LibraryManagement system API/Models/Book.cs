@@ -13,6 +13,8 @@ public class Book
     [StringLength(100)]
     public string Author { get; set; }
     public string Description { get; set; }
+    
+    public string? ImageURL { get; set; }
     // Foreign Key
     [ForeignKey("Category")]
     public int CategoryId { get; set; }

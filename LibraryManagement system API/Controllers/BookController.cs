@@ -34,7 +34,8 @@ public class BookController : ControllerBase
             Author = bookDto.Author,
             Description = bookDto.Description,
             CategoryId = bookDto.CategoryId, // Associate with the specified category
-            PublishedDate = bookDto.PublishedDate // Set published date
+            PublishedDate = bookDto.PublishedDate, // Set published date
+            ImageURL = bookDto.ImageUrl,
         };
         _context.Books.Add(book);
         await _context.SaveChangesAsync();
@@ -77,8 +78,24 @@ public class BookController : ControllerBase
             CategoryName = book.Category.CategoryName, // Assuming Category has a CategoryName property
            Description = book.Description,
             PublishedDate = book.PublishedDate
+            ,CategoryId = book.CategoryId,
         }).ToList();
         return Ok(bookDtos); // Return the list of books as DTOs
     }
-    // Other actions for Update and Delete, similar to the pattern above...
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteBook(int id)
+    {
+        var Book = await _context.Books.FindAsync(id);
+        if (Book == null)
+        {
+            return NotFound("Book not found.");
+        }
+        _context.Books.Remove(Book);
+        _context.SaveChanges();
+        return NoContent();
+    }
+    private bool BookExixts(int id) {
+        return _context.Books.Any(e=>e.BookId == id);
+    }
 }
