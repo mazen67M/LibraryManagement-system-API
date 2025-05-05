@@ -12,10 +12,12 @@ namespace LibraryManagement_system_API
             // Add services to the container.
             builder.Services.AddControllers();
             // Set up the database context
+
             builder.Services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("constr"));
             });
+
             // Configure Identity
             builder.Services.AddIdentity<User, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>()

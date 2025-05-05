@@ -98,8 +98,6 @@ public class UserController : ControllerBase
                                             $"Reset your password using this link: {resetLink}");
         return Ok(new { Message = "If an account with that email exists, a password reset link will be sent." });
     }
-
-
     [HttpPost("resetpassword")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
     {
@@ -107,21 +105,26 @@ public class UserController : ControllerBase
         {
             return BadRequest(ModelState); // Return validation errors
         }
+
         var user = await _userManager.FindByEmailAsync(model.Email);
         if (user == null)
         {
             return BadRequest(new { Message = "User not found." }); // Do not disclose user existence to avoid leaks
         }
+
+        // Decode the token from URL-safe format
+        var decodedToken = WebUtility.UrlDecode(model.Token);
+
         // Attempt to reset the password 
-        var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+        var result = await _userManager.ResetPasswordAsync(user, decodedToken, model.Password);
         if (result.Succeeded)
         {
             return Ok(new { Message = "Password reset successful." });
         }
+
         // Return errors if reset fails
         return BadRequest(result.Errors);
     }
-
     [HttpGet]
     public IActionResult GetAllUsers()
     {
@@ -240,4 +243,3 @@ public class UserController : ControllerBase
         return BadRequest(result.Errors);
     }
 }
-

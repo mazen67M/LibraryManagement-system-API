@@ -8,10 +8,13 @@ namespace LibraryManagement_system_API.Models
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
+        
         public DbSet<Book> Books { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Wishlist> Wishlists { get; set; }
         public DbSet<Category> Categories { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -22,17 +25,6 @@ namespace LibraryManagement_system_API.Models
             modelBuilder.Entity<User>()
                 .Property(u => u.PhoneNumber)
                 .HasMaxLength(15); // No need to call IsOptional() since it's optional by default
-                                   // Additional configurations can be added here if needed
-        }
-
-
-        // Configure the database connection string (if required)
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-            {
-                optionsBuilder.UseSqlServer("YourConnectionString"); // Replace with your actual connection string
-            }
         }
     }
 }
